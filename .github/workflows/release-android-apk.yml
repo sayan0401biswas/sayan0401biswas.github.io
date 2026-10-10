@@ -1,0 +1,57 @@
+name: Build and publish Android app
+
+on:
+  push:
+    tags:
+      - 'android-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install compile SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build release APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/portfolio-release.p12"
+          ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/portfolio-release.p12" \
+            gradle -p android-app assembleRelease --no-daemon
+          cp android-app/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/Sayan-Biswas-Android.apk"
+          sha256sum "$RUNNER_TEMP/Sayan-Biswas-Android.apk" > "$RUNNER_TEMP/Sayan-Biswas-Android.apk.sha256"
+
+      - name: Publish APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "$RUNNER_TEMP/Sayan-Biswas-Android.apk" \
+            "$RUNNER_TEMP/Sayan-Biswas-Android.apk.sha256" \
+            --verify-tag \
+            --title "Sayan Biswas Android App $GITHUB_REF_NAME" \
+            --notes "Install the Sayan Biswas portfolio app on Android. Download the APK asset below and open it on your phone to install."

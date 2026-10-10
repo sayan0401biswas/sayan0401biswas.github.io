@@ -45,7 +45,7 @@ jobs:
           ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/portfolio-release.p12" \
             gradle -p android-app assembleRelease --no-daemon
           cp android-app/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/Sayan-Biswas-Android.apk"
-          sha256sum "$RUNNER_TEMP/Sayan-Biswas-Android.apk" > "$RUNNER_TEMP/Sayan-Biswas-Android.apk.sha256"
+          (cd "$RUNNER_TEMP" && sha256sum Sayan-Biswas-Android.apk > Sayan-Biswas-Android.apk.sha256)
 
       - name: Publish APK release
         env:
